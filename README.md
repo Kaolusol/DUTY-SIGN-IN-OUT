@@ -1,5 +1,3 @@
-# DUTY-SIGN-IN-OUT
-
 <!DOCTYPE html>
 <html lang="th">
 <head>

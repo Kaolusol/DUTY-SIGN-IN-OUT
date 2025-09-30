@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบลงชื่อปฏิบัติหน้าที่ | สถานีดับเพลิง BIT Cities</title>
     
+    <!-- Firebase v10.12.2 (Compatibility versions) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
     <script>
@@ -32,30 +33,40 @@
     
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', Arial, sans-serif; /* ใช้ Inter หรือ fallback เป็น Arial */
             background-color: #f4f4f4;
             color: #333;
             display: flex;
-            justify-content: center;
-            align-items: flex-start;
+            flex-direction: column; /* จัดองค์ประกอบตามแนวตั้ง */
+            justify-content: flex-start;
+            align-items: center;
             min-height: 100vh;
             padding: 20px;
         }
         .container {
             background-color: #ffffff;
             padding: 40px;
-            border-radius: 8px;
+            border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 500px;
             text-align: center;
+            /* เพิ่ม margin ด้านล่างเพื่อแยกจากปุ่มตารางเวร */
+            margin-bottom: 20px; 
         }
-        h1 { color: #cc0000; margin-bottom: 5px; }
+        h1 { color: #cc0000; margin-bottom: 5px; font-weight: 800; font-size: 2em; }
         h2 { color: #555; margin-top: 0; font-weight: normal; font-size: 1.2em; margin-bottom: 25px; }
+        h3 { color: #333; font-size: 1.1em; }
         .form-group { text-align: left; margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         input[type="text"], select#unitSelect {
-            width: 95%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1em; box-sizing: border-box;
+            width: 95%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1em; box-sizing: border-box;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        input[type="text"]:focus, select#unitSelect:focus {
+            border-color: #cc0000;
+            box-shadow: 0 0 5px rgba(204, 0, 0, 0.3);
+            outline: none;
         }
         select#unitSelect {
             width: 100%; -webkit-appearance: none; -moz-appearance: none; appearance: none; background-color: white;
@@ -63,16 +74,102 @@
             background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 10px auto;
         }
         .button-group { display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; margin-bottom: 30px; }
-        .duty-button { flex-grow: 1; padding: 15px; border: none; border-radius: 6px; color: white; font-size: 1.1em; cursor: pointer; transition: background-color 0.3s; font-weight: bold; }
+        .duty-button { flex-grow: 1; padding: 15px; border: none; border-radius: 8px; color: white; font-size: 1.1em; cursor: pointer; transition: background-color 0.3s, transform 0.1s; font-weight: bold; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .duty-button:active { transform: scale(0.98); }
+
         .sign-in { background-color: #28a745; }
         .sign-in:hover { background-color: #218838; }
         .sign-out { background-color: #dc3545; }
         .sign-out:hover { background-color: #c82333; }
-        .log-area { margin-top: 20px; padding: 15px; background-color: #eee; border-radius: 4px; text-align: left; }
-        .log-area h3 { margin-top: 0; color: #333; }
+
+        .log-area { margin-top: 20px; padding: 15px; background-color: #eee; border-radius: 8px; text-align: left; }
+        .log-area h3 { margin-top: 0; color: #333; margin-bottom: 10px;}
         #dutyLog { list-style: none; padding: 0; }
         #dutyLog li { padding: 5px 0; border-bottom: 1px dotted #ccc; font-size: 0.9em; }
         #dutyLog li:last-child { border-bottom: none; }
+        
+        /* Schedule Link Button Styles (Adjusted for internal placement) */
+        .schedule-link {
+            display: block;
+            margin-top: 5px; /* Spacing below the duty buttons */
+            margin-bottom: 25px; /* Spacing above the log area */
+            padding: 15px;
+            background-color: #ff9800; /* Amber/Orange color */
+            color: white;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background-color 0.3s, transform 0.1s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            font-size: 1.1em;
+        }
+        .schedule-link:hover {
+            background-color: #e68900;
+        }
+        .schedule-link:active {
+            transform: scale(0.98);
+        }
+        .schedule-link-icon {
+            vertical-align: middle;
+            margin-right: 8px;
+            height: 18px;
+            width: 18px;
+        }
+        
+        /* === Modal Styles (replacing alert) === */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+            width: 90%;
+            max-width: 350px;
+            text-align: left;
+        }
+        .modal-header {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #cc0000;
+        }
+        .modal-body {
+            margin-bottom: 25px;
+            font-size: 1em;
+            color: #444;
+        }
+        .modal-footer {
+            text-align: right;
+        }
+        .modal-button {
+            padding: 10px 20px;
+            background-color: #cc0000;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        .modal-button:hover {
+            background-color: #990000;
+        }
+        /* Remove unused external wrapper style */
+        /* .schedule-link-area {
+            display: none;
+        } */
+
     </style>
 </head>
 <body onload="listenForLogs()">
@@ -101,6 +198,13 @@
             <button class="duty-button sign-out" onclick="logAction('SIGN_OUT')">ลงเวร (Sign Out)</button>
         </div>
 
+        <!-- Link to Official Schedule - MOVED INSIDE CONTAINER -->
+        <a href="https://shorturl.at/6iAMZ" target="_blank" class="schedule-link">
+            <svg class="schedule-link-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+            คลิกที่นี่เพื่อดูตารางเวร **ฉบับล่าสุด (Official)**
+        </a>
+        <!-- END MOVED -->
+
         <div class="log-area">
             <h3>บันทึกการปฏิบัติหน้าที่ล่าสุด (ดึงจาก Firebase)</h3>
             <ul id="dutyLog">
@@ -108,7 +212,31 @@
         </div>
     </div>
     
+    <!-- Link to Official Schedule - REMOVED EXTERNAL WRAPPER HERE -->
+
+    <!-- Message Modal (Replaces alert()) -->
+    <div id="customModal" class="modal">
+        <div class="modal-content">
+            <div id="modalHeader" class="modal-header">Message</div>
+            <div id="modalBody" class="modal-body">Content</div>
+            <div class="modal-footer">
+                <button onclick="document.getElementById('customModal').style.display = 'none';" class="modal-button">
+                    ตกลง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    
     <script>
+        // Custom Modal Function (replaces alert())
+        function showMessage(title, message) {
+            document.getElementById('modalHeader').textContent = title;
+            document.getElementById('modalBody').textContent = message;
+            const modal = document.getElementById('customModal');
+            modal.style.display = 'flex';
+        }
+
         /**
          * ดึงสถานะปัจจุบันของเจ้าหน้าที่จาก Firebase
          * @param {string} id รหัสเจ้าหน้าที่
@@ -124,7 +252,7 @@
                 };
             } catch (error) {
                 console.error("Error reading status:", error);
-                alert("เกิดข้อผิดพลาดในการตรวจสอบสถานะ");
+                showMessage("ข้อผิดพลาด", "เกิดข้อผิดพลาดในการตรวจสอบสถานะ");
                 return { onDuty: true, onDutyUnit: null }; // ป้องกันการลงชื่อซ้ำหากเกิด error
             }
         }
@@ -136,12 +264,13 @@
 
             // 1. ตรวจสอบข้อมูลพื้นฐาน
             if (!unit) {
-                alert('กรุณาเลือกหน่วยปฏิบัติหน้าที่!');
+                showMessage("ข้อมูลไม่ครบถ้วน", 'กรุณาเลือกหน่วยปฏิบัติหน้าที่!');
                 return;
             }
+            // ใช้ regex สำหรับรหัส ENG 2-3 ตัว - เลข 2-3 หลัก (เช่น FR-12, EMT-050)
             const idPattern = /^[A-Z]{2,3}-\d{2,3}$/;
             if (!idPattern.test(id)) {
-                alert('รหัสเจ้าหน้าที่ไม่ถูกต้อง! รหัสต้องเป็น ENG 2-3 ตัว - เลข 2-3 หลัก (เช่น FR-12, EMT-050)');
+                showMessage("รหัสไม่ถูกต้อง", 'รหัสเจ้าหน้าที่ไม่ถูกต้อง! รหัสต้องเป็น ENG 2-3 ตัว - เลข 2-3 หลัก (เช่น FR-12, EMT-050)');
                 return;
             }
 
@@ -150,17 +279,17 @@
 
             if (actionType === 'SIGN_IN') {
                 if (status.onDuty) {
-                    alert('ไม่สามารถขึ้นเวรซ้ำได้! เจ้าหน้าที่คนนี้ยังอยู่ในสถานะ "ขึ้นเวร"');
+                    showMessage("ขึ้นเวรไม่สำเร็จ", 'ไม่สามารถขึ้นเวรซ้ำได้! เจ้าหน้าที่คนนี้ยังอยู่ในสถานะ "ขึ้นเวร"');
                     return;
                 }
             } else if (actionType === 'SIGN_OUT') {
                 if (!status.onDuty) {
-                    alert('ไม่สามารถลงเวรได้! เจ้าหน้าที่คนนี้ยังไม่ได้อยู่ในสถานะ "ขึ้นเวร"');
+                    showMessage("ลงเวรไม่สำเร็จ", 'ไม่สามารถลงเวรได้! เจ้าหน้าที่คนนี้ยังไม่ได้อยู่ในสถานะ "ขึ้นเวร"');
                     return;
                 }
                 // *** เงื่อนไขการล็อคหน่วย ***
                 if (status.onDutyUnit && status.onDutyUnit !== unit) {
-                    alert(`ลงเวรไม่สำเร็จ! คุณต้องลงเวรในหน่วยที่คุณขึ้นมา: ${status.onDutyUnit}`);
+                    showMessage("หน่วยไม่ตรงกัน", `ลงเวรไม่สำเร็จ! คุณต้องลงเวรในหน่วยที่คุณขึ้นมา: ${status.onDutyUnit}`);
                     return;
                 }
             }
@@ -197,24 +326,26 @@
                 // อัปเดตสถานะ
                 await database.ref(`${STATUS_PATH}/${id}`).set(newStatus);
                 
-                alert(`${id}: ${actionType === 'SIGN_IN' ? 'ขึ้นเวรสำเร็จ' : 'ลงเวรสำเร็จ'}!`);
+                showMessage("บันทึกสำเร็จ", `${id}: ${actionType === 'SIGN_IN' ? 'ขึ้นเวรสำเร็จ' : 'ลงเวรสำเร็จ'}!`);
                 document.getElementById('firefighterID').value = '';
 
             } catch (error) {
                 console.error("Firebase write error:", error);
-                alert(`เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${error.message}`);
+                showMessage("ข้อผิดพลาดในการบันทึก", `เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${error.message}`);
             }
         }
 
-        // ฟังก์ชัน Realtime Listener สำหรับแสดง Log ล่าสุด (ไม่เปลี่ยนแปลง)
+        // ฟังก์ชัน Realtime Listener สำหรับแสดง Log ล่าสุด
         function listenForLogs() {
             const logList = document.getElementById('dutyLog');
             
+            // ดึง 50 รายการล่าสุด
             database.ref(LOG_PATH).limitToLast(50).on('value', (snapshot) => {
                 logList.innerHTML = '';
                 const logs = snapshot.val();
                 
                 if (logs) {
+                    // เรียงลำดับจากล่าสุดไปเก่าสุด
                     const sortedKeys = Object.keys(logs).sort((a, b) => logs[b].timestamp - logs[a].timestamp);
                     
                     sortedKeys.forEach((key) => {
@@ -242,4 +373,3 @@
     </script>
 </body>
 </html>
-
